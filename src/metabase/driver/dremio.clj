@@ -78,6 +78,11 @@
   [_ hsql-form amount unit]
   (hsql/call :timestampadd (hsql/raw (name unit)) amount (hx/->timestamp hsql-form)))
 
+(defn- date-trunc [unit expr] (hsql/call :date_trunc (hx/literal unit) (hx/->timestamp expr)))
+
+(defmethod sql.qp/date [:dremio :week]
+  [_ _ expr]
+  (sql.qp/adjust-start-of-week :dremio (partial date-trunc :week) expr))
 
 ;; Dremio's jdbc doesn't support getObject(Class<T> type)
 (prefer-method
