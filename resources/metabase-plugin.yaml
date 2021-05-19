@@ -1,0 +1,28 @@
+info:
+  name: Metabase Dremio Driver
+  version: 1.0.0
+  description: Allows Metabase to connect to Dremio.
+driver:
+  - name: dremio
+    display-name: Dremio
+    lazy-load: true
+    parent: postgres
+    connection-properties:
+      - host
+      - merge:
+          - port
+          - placeholder: 31010
+      - merge:
+          - dbname
+          - name: dbname
+          - placeholder: schema
+      - user
+      - password
+      - ssl
+      - additional-options
+    connection-properties-include-tunnel-config: true
+init:
+  - step: load-namespace
+    namespace: metabase.driver.dremio
+  - step: register-jdbc-driver
+    class: com.dremio.jdbc.Driver
