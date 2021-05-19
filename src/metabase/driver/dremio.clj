@@ -14,6 +14,7 @@
             [metabase.driver.sql-jdbc.sync :as sql-jdbc.sync]
             [metabase.driver.sql-jdbc.sync.describe-database :as sync.describe-database]
             [metabase.driver.sql.query-processor :as sql.qp]
+            [metabase.driver.sql.util.unprepare :as unprepare]
             [metabase.mbql.util :as mbql.u]
             [metabase.public-settings :as pubset]
             [metabase.query-processor.store :as qp.store]
@@ -83,6 +84,20 @@
 (defmethod sql.qp/date [:dremio :week]
   [_ _ expr]
   (sql.qp/adjust-start-of-week :dremio (partial date-trunc :week) expr))
+
+;; bound variables are not supported in Dremio
+(defmethod driver/execute-reducible-query :dremio
+  [driver {:keys [database settings], {sql :query, :keys [params], :as inner-query} :native, :as outer-query} context respond]
+  (let [inner-query (-> (assoc inner-query
+                          :remark (qputil/query->remark :dremio outer-query)
+                          :query  (if (seq params)
+                                    (unprepare/unprepare driver (cons sql params))
+                                    sql)
+                          :max-rows (mbql.u/query->max-rows-limit outer-query))
+                        (dissoc :params))
+        query       (assoc outer-query :native inner-query)]
+    ((get-method driver/execute-reducible-query :postgres) driver query context respond)))
+
 
 ;; Dremio's jdbc doesn't support getObject(Class<T> type)
 (prefer-method
