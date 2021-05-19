@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [honeysql.core :as hsql]
+            [java-time :as t]
             [metabase.config :as config]
             [metabase.driver :as driver]
             [metabase.driver.sql-jdbc.common :as sql-jdbc.common]
@@ -22,7 +23,7 @@
             [metabase.util.honeysql-extensions :as hx]
             [metabase.util.i18n :refer [trs]])
   (:import [java.sql Types]
-           java.time.OffsetTime))
+           [java.time OffsetDateTime OffsetTime ZonedDateTime]))
 
 (driver/register! :dremio, :parent #{:postgres ::legacy/use-legacy-classes-for-read-and-set})
 
@@ -98,6 +99,14 @@
         query       (assoc outer-query :native inner-query)]
     ((get-method driver/execute-reducible-query :postgres) driver query context respond)))
 
+;; Dremio's cast DateTime to STRING methods (when unprepare)
+(defmethod unprepare/unprepare-value [:dremio OffsetDateTime]
+  [_ t]
+  (format "timestamp '%s'" (t/format "yyyy-MM-dd HH:mm:ss.SSS" t)))
+
+(defmethod unprepare/unprepare-value [:dremio ZonedDateTime]
+  [driver t]
+  (unprepare/unprepare-value driver (t/offset-date-time t)))
 
 ;; Dremio's jdbc doesn't support getObject(Class<T> type)
 (prefer-method
@@ -109,8 +118,3 @@
   sql-jdbc.execute/read-column-thunk
   [::legacy/use-legacy-classes-for-read-and-set Types/TIME]
   [:postgres Types/TIME])
-
-(prefer-method
-  sql-jdbc.execute/set-parameter
-  [::legacy/use-legacy-classes-for-read-and-set OffsetTime]
-  [:postgres OffsetTime])
