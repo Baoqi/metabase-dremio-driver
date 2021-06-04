@@ -14,6 +14,7 @@
             [metabase.driver.sql-jdbc.execute.legacy-impl :as legacy]
             [metabase.driver.sql-jdbc.sync :as sql-jdbc.sync]
             [metabase.driver.sql-jdbc.sync.describe-database :as sync.describe-database]
+            [metabase.driver.sql-jdbc.sync.interface :as sync.i]
             [metabase.driver.sql.query-processor :as sql.qp]
             [metabase.driver.sql.util.unprepare :as unprepare]
             [metabase.mbql.util :as mbql.u]
@@ -45,13 +46,13 @@
 
                   
 (defmethod sql-jdbc.conn/connection-details->spec :dremio
-  [_ {:keys [user password dbname host port ssl]
-      :or {user "dbuser", password "dbpassword", host "localhost", dbname "Dremio", port 31010}
+  [_ {:keys [user password schema host port ssl]
+      :or {user "dbuser", password "dbpassword", schema "", host "localhost", port 31010}
       :as details}]
   (-> {:applicationName    config/mb-app-id-string
        :type :dremio
        :subprotocol "dremio"
-       :subname (str "direct=" host ":" port ";schema=" dbname)
+       :subname (str "direct=" host ":" port (if-not (str/blank? schema) (str ";schema=" schema)))
        :user user
        :password password
        :host host
@@ -74,6 +75,13 @@
   (or (database-type->base-type column-type)
       ((get-method sql-jdbc.sync/database-type->base-type :postgres) driver (keyword (str/lower-case (name column-type))))))
 
+;; if we set schema when create datasource, let dremio only display tables for that schema (instead of all schames)
+(defmethod sync.i/syncable-schemas :dremio
+  [driver conn metadata]
+  (let [current_schema (:current_schema (first (jdbc/query {:connection conn} ["select \"current_schema\""])))]
+    (if (str/blank? current_schema)
+      ((get-method sync.i/syncable-schemas :postgres) driver conn metadata)
+      #{ current_schema })))
 
 ;; Dremio doesn't support "+ (INTERVAL '-30 day')"
 (defmethod sql.qp/add-interval-honeysql-form :dremio
