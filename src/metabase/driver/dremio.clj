@@ -78,10 +78,13 @@
 ;; if we set schema when create datasource, let dremio only display tables for that schema (instead of all schames)
 (defmethod sync.i/syncable-schemas :dremio
   [driver conn metadata]
-  (let [current_schema (:current_schema (first (jdbc/query {:connection conn} ["select \"current_schema\""])))]
+  (let [current_schema (:current_schema (first (jdbc/query {:connection conn} ["select \"current_schema\""])))
+        all_schemas ((get-method sync.i/syncable-schemas :postgres) driver conn metadata)]
     (if (str/blank? current_schema)
-      ((get-method sync.i/syncable-schemas :postgres) driver conn metadata)
-      #{ current_schema })))
+      all_schemas
+      (eduction
+        (filter #(str/starts-with? % current_schema))
+        all_schemas))))
 
 ;; Dremio doesn't support "+ (INTERVAL '-30 day')"
 (defmethod sql.qp/add-interval-honeysql-form :dremio

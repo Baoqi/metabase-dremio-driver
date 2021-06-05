@@ -14,7 +14,7 @@ driver:
           - placeholder: 31010
       - name: schema
         display-name: Schema
-        placeholder: your_schema (optional, leave it empty to read all schemas)
+        placeholder: your_schema prefix (optional, leave it empty to read all schemas)
       - user
       - password
       - ssl
