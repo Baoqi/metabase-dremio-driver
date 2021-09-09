@@ -2,7 +2,7 @@
   :min-lein-version "2.5.0"
 
   :dependencies
-  [[com.dremio.distribution/dremio-jdbc-driver "15.5.0-202105040508160960-dddd4dca"]]
+  [[com.dremio.distribution/dremio-jdbc-driver "17.0.0-202107060524010627-31b5222b"]]
   
   :aot :all     ; Checks for compile-time failures when building the uberjar
 
