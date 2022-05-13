@@ -12,8 +12,9 @@ driver:
       - merge:
           - port
           - placeholder: 31010
-      - name: schema
-        display-name: Schema
+      - name: schema-filters
+        type: schema-filters
+        display-name: Schemas
         placeholder: your_schema prefix (optional, leave it empty to read all schemas)
       - user
       - password

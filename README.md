@@ -2,10 +2,16 @@
 
 Dremio driver for Metabase BI
 
+Version compatibility:
+
+-   Version 1.1.x works with Metabase v0.43.0/v1.43.0 and above
+-   Version 1.0.x works with Metabase bellow v0.43.0/v1.43.0 (exclude)
+
+
 Tested on:
 
--   Dremio 15.0.0
--   Metabase 0.39.x
+-   Dremio 20.0.0+
+-   Metabase 0.43.0+
 
 
 ## Which features works
@@ -27,26 +33,23 @@ Dremio Driver can works in most metabase functionalities:
 
 ## Building the driver
 
+For Metabase 0.43.0+, there were many changes, for exmample, the build tool changed from lein to Clojure CLI Tools. So, the build steps for metabase-dremio-driver 1.1.x also changed.
 
-### Prereq: Install Metabase as a local maven dependency, compiled for building drivers
+### Prereq: Build Metabase source locally
 
-Clone the [Metabase repo](https://github.com/metabase/metabase) first if you haven't already done so.
+Please refer to [Building Metabase](https://www.metabase.com/docs/latest/developers-guide/build.html) document.
+
+### Build metabase-dremio-driver
+
+clone the source code, and put it under the same parent folder as metabase's source code.
+
+then, run
 
 ```shell
-cd /path/to/metabase_source
-lein install-for-building-drivers
+clojure -X:build :project-dir "\"$(pwd)\""
 ```
 
-
-### Build dremio driver
-
-```shell
-# (In the metabase-dremio-driver directory)
-lein clean
-LEIN_SNAPSHOTS_IN_RELEASE=true lein uberjar
-```
-
-The generated "dremio.metabase-driver.jar" can be found in target/uberjar folder
+The generated "dremio.metabase-driver.jar" can be found in target folder
 
 
 ## Thanks

@@ -75,22 +75,6 @@
   (or (database-type->base-type column-type)
       ((get-method sql-jdbc.sync/database-type->base-type :postgres) driver (keyword (str/lower-case (name column-type))))))
 
-;; if we set schema when create datasource, let dremio only display tables for that schema (instead of all schames)
-(defmethod sync.i/syncable-schemas :dremio
-  [driver conn metadata]
-  ; SEE: https://community.dremio.com/t/bug-report-current-schema-returned-extra-double-quote-when-the-current-schema-contains-special-character/7354
-  ;   the "select current_schema" returns wrong result for home spaces, for example, if my schema is:  @bwu.test1
-  ;     currently, "select current_schema" will return "@bwu".test1, so the workaround for now is to remove the first ""
-  (let [current_schema (str/replace
-                         (:current_schema (first (jdbc/query {:connection conn} ["select \"current_schema\""])))
-                         #"^\"(@[^\"]+)\""
-                         "$1")
-        all_schemas ((get-method sync.i/syncable-schemas :postgres) driver conn metadata)]
-    (if (str/blank? current_schema)
-      all_schemas
-      (eduction
-        (filter #(str/starts-with? % current_schema))
-        all_schemas))))
 
 ;; Dremio doesn't support "+ (INTERVAL '-30 day')"
 (defmethod sql.qp/add-interval-honeysql-form :dremio
