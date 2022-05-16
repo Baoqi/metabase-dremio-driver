@@ -1,0 +1,56 @@
+name: Build a metabase jar
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache check
+        id: cache-metabase-jar
+        uses: actions/cache@v2
+        with:
+          path: target/uberjar/metabase.jar
+          key: ${{ inputs.version }}-metabase-jar
+
+      - name: "Checkout Metabase Code"
+        uses: actions/checkout@v2
+        if: steps.cache-metabase-jar.outputs.cache-hit != 'true'
+        with:
+          repository: metabase/metabase
+          ref: ${{ inputs.version }}
+
+      - name: Prepare java
+        uses: actions/setup-java@v2
+        if: steps.cache-metabase-jar.outputs.cache-hit != 'true'
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@3.7
+        if: steps.cache-metabase-jar.outputs.cache-hit != 'true'
+        with:
+          # Install just one or all simultaneously
+          cli: 'latest' # Clojure CLI based on tools.deps
+          lein: 'latest'     # or use 'latest' to always provision latest version of leiningen
+
+      - name: "Build metabase"
+        if: steps.cache-metabase-jar.outputs.cache-hit != 'true'
+        run: |
+              clojure -X:deps prep
+              cd modules/drivers
+              clojure -X:deps prep
+              cd ../..
+              clojure -T:build uberjar
+      - name: Upload resulting jar file
+        uses: actions/upload-artifact@v2
+        with:
+          name: metabase.jar
+          path: target/uberjar/metabase.jar
+          retention-days: 1

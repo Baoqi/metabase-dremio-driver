@@ -1,0 +1,55 @@
+name: Build connector
+
+on:
+  workflow_dispatch:
+    inputs:
+      metabase-version:
+        required: true
+        description: Metabase version to compile with
+        type: string
+        default: v0.43.0
+
+jobs:
+  build-metabase:
+    uses: Baoqi/metabase-dremio-driver/.github/workflows/build-metabase.yml@main
+    with:
+      version: ${{ github.event.inputs.metabase-version }}
+
+  build-connector:
+    needs: build-metabase
+    runs-on: ubuntu-latest    
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: "Download metabase jar"
+      uses: actions/download-artifact@v2
+      with:
+        name: metabase.jar
+
+    - name: "Maven install"
+      run: |    
+           mkdir repo
+           mvn deploy:deploy-file -Durl=file:repo -DgroupId=com.github.Baoqi -DartifactId=metabase-core -Dversion=0.43 -Dpackaging=jar -Dfile=metabase.jar
+    - name: "Install dependencies"
+      run: lein deps
+
+    - name: "Package into a jar"
+      run: LEIN_SNAPSHOTS_IN_RELEASE=true DEBUG=1 lein uberjar
+
+    - name: Install clojure tools
+      uses: DeLaGuardo/setup-clojure@3.7
+      with:
+        cli: 'latest'
+
+    - name: Get version
+      id: get-version
+      run: |
+        clojure -e '(-> "./project.clj" slurp read-string (nth 2))'
+        version=$(clojure -e '(-> "./project.clj" slurp read-string (nth 2))' | tr -d '"')
+        mv target/uberjar/dremio.metabase-driver.jar target/uberjar/dremio.metabase-driver-${version}.jar
+        echo "::set-output name=version::${version}"
+    - name: Upload resulting jar file
+      uses: actions/upload-artifact@v2
+      with:
+        name: dremio.metabase-driver-${{steps.get-version.outputs.version}}.jar
+        path: target/uberjar/dremio.metabase-driver-${{steps.get-version.outputs.version}}.jar
