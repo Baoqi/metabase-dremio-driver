@@ -6,7 +6,10 @@
   
   :aot :all     ; Checks for compile-time failures when building the uberjar
 
-  :repositories {"dremio-free" "https://maven.dremio.com/free/"}
+  :repositories [["dremio-free" {
+                                 :url "https://maven.dremio.com/free/"
+                                 }]
+                 ["project" "file:repo"]]
 
   :profiles
   {:provided
