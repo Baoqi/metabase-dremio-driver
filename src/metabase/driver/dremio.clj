@@ -59,7 +59,7 @@
        :port port
        :classname "com.dremio.jdbc.Driver"
        :loginTimeout 10
-       :encrypt (boolean ssl)
+       :ssl (boolean ssl)
        :sendTimeAsDatetime false}
       (sql-jdbc.common/handle-additional-options details, :seperator-style :semicolon)))
 
