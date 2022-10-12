@@ -46,10 +46,10 @@ jobs:
       run: |
         clojure -e '(-> "./project.clj" slurp read-string (nth 2))'
         version=$(clojure -e '(-> "./project.clj" slurp read-string (nth 2))' | tr -d '"')
-        mv target/uberjar/dremio.metabase-driver.jar target/uberjar/dremio.metabase-driver-${version}.jar
+        mv target/default+uberjar/dremio.metabase-driver.jar target/default+uberjar/dremio.metabase-driver-${version}.jar
         echo "::set-output name=version::${version}"
     - name: Upload resulting jar file
       uses: actions/upload-artifact@v2
       with:
         name: dremio.metabase-driver-${{steps.get-version.outputs.version}}.jar
-        path: target/uberjar/dremio.metabase-driver-${{steps.get-version.outputs.version}}.jar
+        path: target/default+uberjar/dremio.metabase-driver-${{steps.get-version.outputs.version}}.jar
