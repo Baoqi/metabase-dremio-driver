@@ -11,7 +11,9 @@ pom.xml.asc
 .lein-plugins/
 .lein-failures
 .nrepl-port
+.clj-kondo/
 .cpcache/
+.lsp/
 .idea/
 *.iml
 .DS_Store

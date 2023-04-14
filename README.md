@@ -41,12 +41,13 @@ Please refer to [Building Metabase](https://www.metabase.com/docs/latest/develop
 
 ### Build metabase-dremio-driver
 
-clone the source code, and put it under the same parent folder as metabase's source code.
+clone the source code, put it under the same parent folder as metabase's source code and
+set absolute path for metabase and metabase-dremio-driver repo in the `build.sh`
 
 then, run
 
 ```shell
-clojure -X:build :project-dir "\"$(pwd)\""
+sudo /bin/bash build.sh
 ```
 
 The generated "dremio.metabase-driver.jar" can be found in target folder
