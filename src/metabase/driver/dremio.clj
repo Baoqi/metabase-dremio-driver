@@ -4,7 +4,7 @@
             [clojure.java.jdbc :as jdbc]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
-            [honeysql.core :as hsql]
+            [honey.sql :as sql]
             [java-time :as t]
             [metabase.config :as config]
             [metabase.driver :as driver]
@@ -21,7 +21,7 @@
             [metabase.public-settings :as pubset]
             [metabase.query-processor.store :as qp.store]
             [metabase.query-processor.util :as qputil]
-            [metabase.util.honeysql-extensions :as hx]
+            [metabase.util.honey-sql-2 :as h2x]
             [metabase.util.i18n :refer [trs]])
   (:import [java.sql Types]
            [java.time OffsetDateTime OffsetTime ZonedDateTime]))
@@ -79,9 +79,9 @@
 ;; Dremio doesn't support "+ (INTERVAL '-30 day')"
 (defmethod sql.qp/add-interval-honeysql-form :dremio
   [_ hsql-form amount unit]
-  (hsql/call :timestampadd (hsql/raw (name unit)) amount (hx/->timestamp hsql-form)))
+  [:timestampadd [:raw (name unit)] amount (h2x/->timestamp hsql-form)])
 
-(defn- date-trunc [unit expr] (hsql/call :date_trunc (hx/literal unit) (hx/->timestamp expr)))
+(defn- date-trunc [unit expr] (sql/call :date_trunc (h2x/literal unit) (h2x/->timestamp expr)))
 
 (defmethod sql.qp/date [:dremio :week]
   [_ _ expr]

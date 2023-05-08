@@ -5,7 +5,7 @@
  {"dremio-free" {:url "https://maven.dremio.com/free/"}}
 
  :deps
- {com.dremio.distribution/dremio-jdbc-driver {:mvn/version "21.1.1-202204292111390812-57b1832f"}}
+ {com.dremio.distribution/dremio-jdbc-driver {:mvn/version "24.0.0-202302100528110223-3a169b7c"}}
 
  ;; build the driver with clojure -X:build
  :aliases
