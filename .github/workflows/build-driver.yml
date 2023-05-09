@@ -7,49 +7,43 @@ on:
         required: true
         description: Metabase version to compile with
         type: string
-        default: v0.43.0
+        default: v0.46.2
 
 jobs:
-  build-metabase:
-    uses: Baoqi/metabase-dremio-driver/.github/workflows/build-metabase.yml@main
-    with:
-      version: ${{ github.event.inputs.metabase-version }}
-
   build-connector:
-    needs: build-metabase
-    runs-on: ubuntu-latest    
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - name: "Checkout Metabase Code"
+        uses: actions/checkout@v2
+        with:
+          repository: metabase/metabase
+          ref: ${{ github.event.inputs.metabase-version }}
+          path: metabase
 
-    - name: "Download metabase jar"
-      uses: actions/download-artifact@v2
-      with:
-        name: metabase.jar
+      - name: "Checkout Driver"
+        uses: actions/checkout@v2
+        with:
+          path: metabase-dremio-driver
 
-    - name: "Maven install"
-      run: |    
-           mkdir repo
-           mvn deploy:deploy-file -Durl=file:repo -DgroupId=com.github.Baoqi -DartifactId=metabase-core -Dversion=0.43 -Dpackaging=jar -Dfile=metabase.jar
-    - name: "Install dependencies"
-      run: lein deps
+      - name: Prepare java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-    - name: "Package into a jar"
-      run: LEIN_SNAPSHOTS_IN_RELEASE=true DEBUG=1 lein uberjar
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@3.7
+        if: steps.cache-metabase-jar.outputs.cache-hit != 'true'
+        with:
+          # Install just one or all simultaneously
+          cli: 'latest' # Clojure CLI based on tools.deps
 
-    - name: Install clojure tools
-      uses: DeLaGuardo/setup-clojure@3.7
-      with:
-        cli: 'latest'
+      - name: "Run build.sh"
+        run: |
+          cd metabase-dremio-driver && ./build.sh
 
-    - name: Get version
-      id: get-version
-      run: |
-        clojure -e '(-> "./project.clj" slurp read-string (nth 2))'
-        version=$(clojure -e '(-> "./project.clj" slurp read-string (nth 2))' | tr -d '"')
-        mv target/default+uberjar/dremio.metabase-driver.jar target/default+uberjar/dremio.metabase-driver-${version}.jar
-        echo "::set-output name=version::${version}"
-    - name: Upload resulting jar file
-      uses: actions/upload-artifact@v2
-      with:
-        name: dremio.metabase-driver-${{steps.get-version.outputs.version}}.jar
-        path: target/default+uberjar/dremio.metabase-driver-${{steps.get-version.outputs.version}}.jar
+      - name: Upload resulting jar file
+        uses: actions/upload-artifact@v2
+        with:
+          name: dremio.metabase-driver.jar
+          path: metabase-dremio-driver/target/dremio.metabase-driver.jar
