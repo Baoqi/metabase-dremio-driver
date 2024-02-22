@@ -109,6 +109,24 @@
   [driver t]
   (unprepare/unprepare-value driver (t/offset-date-time t)))
 
+(defmethod sql-jdbc.sync/current-user-table-privileges :dremio
+  [_driver conn-spec & {:as _options}]
+  (->> (jdbc/query
+        conn-spec
+        (str/join
+         "\n"
+         ["SELECT"
+          "   NULL AS role,"
+          "   v.TABLE_SCHEMA AS \"schema\","
+          "   v.TABLE_NAME AS \"table\","
+          "   True AS \"update\","
+          "   True AS \"select\","
+          "   True AS \"insert\","
+          "   True AS \"delete\""
+          "FROM information_schema.\"VIEWS\" v"
+          "WHERE NOT ILIKE (v.TABLE_SCHEMA, '@%')"]))
+       (filter #(or (:select %) (:update %) (:delete %) (:update %)))))
+
 ;; Dremio's jdbc doesn't support getObject(Class<T> type)
 (prefer-method
   sql-jdbc.execute/read-column-thunk
