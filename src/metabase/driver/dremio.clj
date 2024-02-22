@@ -127,6 +127,11 @@
           "WHERE NOT ILIKE (v.TABLE_SCHEMA, '@%')"]))
        (filter #(or (:select %) (:update %) (:delete %) (:update %)))))
 
+;; Dremio's jdbc doesn't support set timezone
+(defmethod sql-jdbc.execute/set-timezone-sql :dremio
+  [_]
+  "-- INFO: METABASE TIMEZONE %s;")
+
 ;; Dremio's jdbc doesn't support getObject(Class<T> type)
 (prefer-method
   sql-jdbc.execute/read-column-thunk
