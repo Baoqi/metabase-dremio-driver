@@ -4,6 +4,7 @@ Dremio driver for Metabase BI
 
 Version compatibility:
 
+-   Version 1.3.x works with Metabase v0.48.0/v1.48.0 and above
 -   Version 1.2.x works with Metabase v0.46.0/v1.46.0 and above
 -   Version 1.1.x works with Metabase v0.43.0/v1.43.0 and bellow v0.46.0/v1.46.0 (exclude)
 -   Version 1.0.x works with Metabase bellow v0.43.0/v1.43.0 (exclude)
@@ -12,7 +13,7 @@ Version compatibility:
 Tested on:
 
 -   Dremio 24.0.0+
--   Metabase 0.46.0+
+-   Metabase 0.48.0+
 
 
 ## Which features works
