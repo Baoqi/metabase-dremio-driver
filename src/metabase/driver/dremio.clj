@@ -137,7 +137,7 @@
   (sql-jdbc.execute/do-with-connection-with-options
    driver database nil
    (fn [^java.sql.Connection conn]
-     (with-open [stmt (.prepareStatement conn "SELECT 'UTC' AS timezone;")
+     (with-open [stmt (.prepareStatement conn "SELECT REPLACE(string_val, '\"', '') AS timezone FROM sys.boot b WHERE name = 'user.timezone' LIMIT 1;")
                  rset (.executeQuery stmt)]
        (when (.next rset)
          (.getString rset 1))))))
