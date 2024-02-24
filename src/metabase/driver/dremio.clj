@@ -28,6 +28,10 @@
 
 (driver/register! :dremio, :parent #{:postgres ::legacy/use-legacy-classes-for-read-and-set})
 
+(doseq [[feature supported?] {:table-privileges                false
+                              :set-timezone                    false}]
+  (defmethod driver/database-supports? [:dremio feature] [_driver _feature _db] supported?))
+
 ;;; +----------------------------------------------------------------------------------------------------------------+
 ;;; |                                             metabase.driver impls                                              |
 ;;; +----------------------------------------------------------------------------------------------------------------+
@@ -109,38 +113,9 @@
   [driver t]
   (unprepare/unprepare-value driver (t/offset-date-time t)))
 
-(defmethod driver/current-user-table-privileges :postgres
-  [_driver database]
-  (let [conn-spec (sql-jdbc.conn/db->pooled-connection-spec database)]
-    (jdbc/query
-     conn-spec
-     (str/join
-      "\n"
-      ["SELECT"
-       "   NULL AS role,"
-       "   v.TABLE_SCHEMA AS \"schema\","
-       "   v.TABLE_NAME AS \"table\","
-       "   True AS \"update\","
-       "   True AS \"select\","
-       "   True AS \"insert\","
-       "   True AS \"delete\""
-       "FROM information_schema.\"VIEWS\" v"
-       "WHERE NOT ILIKE (v.TABLE_SCHEMA, '@%')"]))))
-
-;; Dremio's jdbc doesn't support set timezone
-(defmethod sql-jdbc.execute/set-timezone-sql :dremio
-  [_]
-  "SELECT CONVERT_TIMEZONE('UTC', %s, CURRENT_TIMESTAMP()) AS metabase_timezone;")
-
-(defmethod driver/db-default-timezone :dremio
-  [driver database]
-  (sql-jdbc.execute/do-with-connection-with-options
-   driver database nil
-   (fn [^java.sql.Connection conn]
-     (with-open [stmt (.prepareStatement conn "SELECT REPLACE(string_val, '\"', '') AS timezone FROM sys.boot b WHERE name = 'user.timezone' LIMIT 1;")
-                 rset (.executeQuery stmt)]
-       (when (.next rset)
-         (.getString rset 1))))))
+;; Dremio is always in UTC
+(defmethod driver/db-default-timezone :dremio [_ _]
+           "UTC")
 
 ;; Dremio's jdbc doesn't support getObject(Class<T> type)
 (prefer-method
