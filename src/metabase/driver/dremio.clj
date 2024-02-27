@@ -29,7 +29,8 @@
 (driver/register! :dremio, :parent #{:postgres ::legacy/use-legacy-classes-for-read-and-set})
 
 (doseq [[feature supported?] {:table-privileges                false
-                              :set-timezone                    false}]
+                              :set-timezone                    false
+                              :connection-impersonation        false}]
   (defmethod driver/database-supports? [:dremio feature] [_driver _feature _db] supported?))
 
 ;;; +----------------------------------------------------------------------------------------------------------------+
