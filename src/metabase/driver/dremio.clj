@@ -17,7 +17,7 @@
             [metabase.driver.sql-jdbc.sync.interface :as sync.i]
             [metabase.driver.sql.query-processor :as sql.qp]
             [metabase.driver.sql.util.unprepare :as unprepare]
-            [metabase.mbql.util :as mbql.u]
+            [metabase.legacy-mbql.util :as mbql.u]
             [metabase.public-settings :as pubset]
             [metabase.query-processor.store :as qp.store]
             [metabase.query-processor.util :as qputil]
@@ -43,8 +43,11 @@
 ;;; ----------------------------------------------------- Impls ------------------------------------------------------
 ;;; +----------------------------------------------------------------------------------------------------------------+
 
-;; don't use the Postgres implementation for `describe-table` since it tries to fetch enums which Dremio doesn't
-;; support
+;; don't use the Postgres specified implementation for `describe-database` and `describe-table`
+(defmethod driver/describe-database :dremio
+           [& args]
+           (apply (get-method driver/describe-database :sql-jdbc) args))
+
 (defmethod driver/describe-table :dremio
   [& args]
   (apply (get-method driver/describe-table :sql-jdbc) args))
