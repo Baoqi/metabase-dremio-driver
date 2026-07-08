@@ -5,13 +5,13 @@
  {"dremio-free" {:url "https://maven.dremio.com/free/"}}
 
  :deps
- {com.dremio.distribution/dremio-jdbc-driver {:mvn/version "24.0.0-202302100528110223-3a169b7c"}}
+ {com.dremio.distribution/dremio-jdbc-driver {:mvn/version "26.0.0-202504290223270716-afdd6663"}}
 
  ;; build the driver with clojure -X:build
  :aliases
  {:build
   {:extra-deps {metabase/metabase-core {:local/root "../metabase"}
-                metabase/build-drivers {:local/root "../metabase/bin/build-drivers"}}
+                metabase/build-drivers {:local/root "../metabase/bin/build-driver"}}
    :exec-fn    build-drivers.build-driver/build-driver!
    :exec-args  {:driver      :dremio
                 :project-dir "."

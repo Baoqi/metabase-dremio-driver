@@ -4,6 +4,7 @@ Dremio driver for Metabase BI
 
 Version compatibility:
 
+-   Version 1.57.x works with Metabase v0.57.0/v1.57.0 and above
 -   Version 1.5.x works with Metabase v0.51.0/v1.51.0 and above
 -   Version 1.4.x works with Metabase v0.50.0/v1.50.0 and above
 -   Version 1.3.x works with Metabase v0.48.0/v1.48.0 and above
@@ -59,5 +60,6 @@ The generated "dremio.metabase-driver.jar" can be found in target folder
 
 
 ## Thanks
+
 
 Referred to <https://github.com/arsenikstiger/dremio-driver>, but most logic are referred from Metabase's redshift & sparksql driver.

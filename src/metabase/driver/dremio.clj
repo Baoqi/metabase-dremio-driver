@@ -6,8 +6,9 @@
             [clojure.tools.logging :as log]
             [honey.sql :as sql]
             [java-time :as t]
-            [metabase.config :as config]
+            [metabase.config.core :as config]
             [metabase.driver :as driver]
+	    [metabase.driver-api.core :as driver-api]
             [metabase.driver.sql-jdbc.common :as sql-jdbc.common]
             [metabase.driver.sql-jdbc.connection :as sql-jdbc.conn]
             [metabase.driver.sql-jdbc.execute :as sql-jdbc.execute]
@@ -16,8 +17,10 @@
             [metabase.driver.sql-jdbc.sync.describe-database :as sync.describe-database]
             [metabase.driver.sql-jdbc.sync.interface :as sync.i]
             [metabase.driver.sql.query-processor :as sql.qp]
+	    [metabase.driver.sync :as driver.s]
+	    [metabase.util :as u]
             [metabase.legacy-mbql.util :as mbql.u]
-            [metabase.public-settings :as pubset]
+;;;            [metabase.public-settings :as pubset]
             [metabase.query-processor.store :as qp.store]
             [metabase.query-processor.util :as qputil]
             [metabase.util.honey-sql-2 :as h2x]
@@ -29,6 +32,9 @@
 
 (doseq [[feature supported?] {:table-privileges                false
                               :set-timezone                    false
+                              :describe-fields                 false
+                              :describe-fks                    false
+                              :describe-indexes                false
                               :connection-impersonation        false}]
   (defmethod driver/database-supports? [:dremio feature] [_driver _feature _db] supported?))
 
@@ -43,15 +49,7 @@
 ;;; +----------------------------------------------------------------------------------------------------------------+
 
 ;; don't use the Postgres specified implementation for `describe-database` and `describe-table`
-(defmethod driver/describe-database :dremio
-           [& args]
-           (apply (get-method driver/describe-database :sql-jdbc) args))
 
-(defmethod driver/describe-table :dremio
-  [& args]
-  (apply (get-method driver/describe-table :sql-jdbc) args))
-
-                  
 (defmethod sql-jdbc.conn/connection-details->spec :dremio
   [_ {:keys [user password schema host port ssl]
       :or {user "dbuser", password "dbpassword", schema "", host "localhost", port 31010}
@@ -70,6 +68,68 @@
        :sendTimeAsDatetime false}
       (sql-jdbc.common/handle-additional-options details, :seperator-style :semicolon)))
 
+;; Skip the postgres implementation of describe fields as it has to handle custom enums which dremio doesn't support. Based on redshift fix
+(defmethod sql-jdbc.sync/describe-fields-pre-process-xf :dremio
+  [driver database & args]
+  (apply (get-method sql-jdbc.sync/describe-fields-pre-process-xf :sql-jdbc) driver database args))
+
+;; Skip the postgres implementation  as it has to handle custom enums which dremio doesn't support. Based on redshift fix
+(defmethod driver/dynamic-database-types-lookup :dremio
+  [driver database database-types]
+  ((get-method driver/dynamic-database-types-lookup :sql-jdbc) driver database database-types))
+
+(def ^:private get-tables-sql
+  ;; Cal 2024-04-09 This query uses tables that the JDBC redshift driver currently uses.
+  ;; It does not return tables from datashares, which is a relatively new feature of redshift.
+  ;; See https://github.com/dbt-labs/dbt-redshift/issues/742 for an implementation for DBT's integration with redshift
+  ;; for inspiration, and the JDBC driver itself:
+  ;; https://github.com/aws/amazon-redshift-jdbc-driver/blob/master/src/main/java/com/amazon/redshift/jdbc/RedshiftDatabaseMetaData.java#L1794
+  ;; This is a vector so adding parameters doesn't require a change to describe-database-tables in the future.
+  [(str/join
+    "\n"
+    ["SELECT TABLE_NAME name, TABLE_SCHEMA schema, 't' type, '' description FROM INFORMATION_SCHEMA.\"TABLES\" union ALL SELECT TABLE_NAME name, TABLE_SCHEMA schema, 'v' type, '' description FROM INFORMATION_SCHEMA.VIEWS"])])
+
+(defn- describe-database-tables
+  [database]
+  (let [[inclusion-patterns
+         exclusion-patterns] (driver.s/db-details->schema-filter-patterns database)
+        syncable? (fn [schema]
+                    (sync.describe-database/include-schema-logging-exclusion inclusion-patterns exclusion-patterns schema))]
+    (eduction
+     (comp (filter (comp syncable? :schema))
+           (map #(dissoc % :type)))
+     (sql-jdbc.execute/reducible-query database get-tables-sql))))
+
+
+  (defmethod driver/describe-database* :dremio
+    [driver database]
+    ;; TODO: change this to return a reducible so we don't have to hold 100k tables in memory in a set like this
+    ;;
+    ;; Redshift sync is super duper flaky and un-robust! This auto-retry is a temporary workaround until we can actually
+    ;; fix #45874
+    (try
+      (u/auto-retry (if driver-api/is-prod? 2 5)
+        (try
+          {:tables (into #{} (describe-database-tables database))}
+          (catch Throwable e
+            ;; during test/REPL runs, wait a second before throwing the exception, that way when we do our retry there is
+            ;; a better chance of it succeeding.
+            (when-not driver-api/is-prod?
+              (Thread/sleep 1000))
+            (throw e))))
+      (catch Throwable e
+        (throw (ex-info (format "Error in %s describe-database: %s" driver (ex-message e))
+                        {}
+                        e)))))
+
+(defmethod driver/describe-database :dremio
+  [& args]
+  (apply (get-method driver/describe-database :sql-jdbc) args))
+
+(defmethod driver/describe-table :dremio
+  [& args]
+  (apply (get-method driver/describe-table :sql-jdbc) args))
+
 ;; custom Dremio type handling
 (def ^:private database-type->base-type
   (sql-jdbc.sync/pattern-based-database-type->base-type
@@ -87,6 +147,10 @@
 (defmethod sql.qp/add-interval-honeysql-form :dremio
   [_ hsql-form amount unit]
   [:timestampadd [:raw (name unit)] amount (h2x/->timestamp hsql-form)])
+
+(defmethod sql.qp/current-datetime-honeysql-form :dremio
+  [_driver]
+  (h2x/with-database-type-info [:current_timestamp] "timestamp"))
 
 (defn- date-trunc [unit expr] (sql/call :date_trunc (h2x/literal unit) (h2x/->timestamp expr)))
 

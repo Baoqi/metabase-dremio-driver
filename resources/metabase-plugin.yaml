@@ -1,6 +1,6 @@
 info:
   name: Metabase Dremio Driver
-  version: 1.5.0
+  version: 1.5.1
   description: Allows Metabase to connect to Dremio.
 driver:
   - name: dremio
