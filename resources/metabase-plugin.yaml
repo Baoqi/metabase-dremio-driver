@@ -1,12 +1,12 @@
 info:
   name: Metabase Dremio Driver
-  version: 1.5.1
+  version: 1.5.2
   description: Allows Metabase to connect to Dremio.
 driver:
   - name: dremio
     display-name: Dremio
     lazy-load: true
-    parent: postgres
+    parent: sql-jdbc
     connection-properties:
       - host
       - merge:
